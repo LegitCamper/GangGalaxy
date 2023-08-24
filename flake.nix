@@ -97,6 +97,10 @@
         };
 
         rust-dev-deps = with pkgs; [
+          cargo-deny
+          cargo-edit
+          cargo-watch
+          rustup
           rust-analyzer
           rustfmt
           lldb
