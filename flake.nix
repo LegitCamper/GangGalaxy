@@ -1,73 +1,6 @@
-# {
-#   description = "A 'snake game'";
-#   inputs = {
-#     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-#     flake-utils.url = "github:numtide/flake-utils";
-#     rust-overlay.url = "github:oxalica/rust-overlay";
-#   };
-#   outputs = { self, nixpkgs, rust-overlay, flake-utils }:
-#     with flake-utils.lib;
-#     eachSystem [ system.x86_64-linux ] (system:
-#       let
-#         overlays = [
-#           (import rust-overlay)
-#           (self: super: {
-#             rustToolchain = let rust = super.rust-bin;
-#             in if builtins.pathExists ./rust-toolchain.toml then
-#               rust.fromRustupToolchainFile ./rust-toolchain.toml
-#             else if builtins.pathExists ./rust-toolchain then
-#               rust.fromRustupToolchainFile ./rust-toolchain
-#             else
-#               rust.stable.latest.default;
-#           })
-#         ];
-#         pkgs = (import nixpkgs) { inherit system overlays; };
-#       in rec {
-#         packages.default = packages."${system}";
-
-#         devShells.default = pkgs.mkShell {
-#           packages = with pkgs; [
-#             python3
-#             inkscape
-#             blender
-#             imagemagick
-#             pkgconfig
-#             clang
-#             rustToolchain
-#             openssl
-#             pkg-config
-#             cargo-deny
-#             cargo-edit
-#             cargo-watch
-#             rustup
-#             rust-analyzer
-#             # Vulkan
-#             vulkan-tools
-#             vulkan-headers
-#             vulkan-loader
-#             vulkan-validation-layers
-#             alsaLib # Sound support
-#             libudev-zero # device management
-#             lld # fast linker
-#             xlibsWrapper
-#             xorg.libXcursor
-#             xorg.libXrandr
-#             xorg.libXi
-#             x11
-#             libxkbcommon
-#             wayland
-#           ];
-#           shellHook = ''
-#             export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${
-#               pkgs.lib.makeLibraryPath [ udev alsaLib vulkan-loader ]
-#             }"'';
-#           # RUST_SRC_PATH = rustPlatform.rustLibSrc;
-#         };
-#       });
-
-# }
-
 {
+  description = "A 'snake game'";
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
@@ -108,21 +41,18 @@
           nur.packages.${system}.wasm-server-runner
           renderdoc
         ];
-        build-deps = with pkgs; [ pkgconfig mold clang makeWrapper lld ];
+        build-deps = with pkgs; [ pkgconfig pkg-config mold clang makeWrapper lld ];
         runtime-deps = with pkgs; [
           alsa-lib
           udev
-          xorg.libX11
-          xorg.libXcursor
-          xorg.libXrandr
-          xorg.libXi
-          xorg.libxcb
+          xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi xorg.libxcb # To use the x11 feature 
+          libxkbcommon wayland # To use the wayland feature
           libGL
           vulkan-loader
           vulkan-headers
         ];
       in {
-        devShell.${system} = let
+        devShells.${system}.default = let
           all_deps = runtime-deps ++ build-deps ++ rust-dev-deps
             ++ [ rust-bin ];
         in pkgs.mkShell {
@@ -131,7 +61,10 @@
           PROGRAM_NAME = program_name;
           shellHook = ''
             export CARGO_MANIFEST_DIR=$(pwd)
-          '';
+            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath [
+              pkgs.alsaLib
+              pkgs.udev
+            ]}"'';
         };
         packages.${system} = {
           app = naersk-lib.buildPackage {
