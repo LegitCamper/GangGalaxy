@@ -41,12 +41,27 @@
           nur.packages.${system}.wasm-server-runner
           renderdoc
         ];
-        build-deps = with pkgs; [ pkgconfig pkg-config mold clang makeWrapper lld ];
+        build-deps = with pkgs; [
+          pkgconfig
+          pkg-config
+          mold
+          clang
+          makeWrapper
+          lld
+        ];
         runtime-deps = with pkgs; [
           alsa-lib
+          alsa-tools
+          alsa-plugins
+          pipewire
           udev
-          xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi xorg.libxcb # To use the x11 feature 
-          libxkbcommon wayland # To use the wayland feature
+          xorg.libX11
+          xorg.libXcursor
+          xorg.libXrandr
+          xorg.libXi
+          xorg.libxcb # To use the x11 feature
+          libxkbcommon
+          wayland # To use the wayland feature
           libGL
           vulkan-loader
           vulkan-headers
@@ -61,10 +76,9 @@
           PROGRAM_NAME = program_name;
           shellHook = ''
             export CARGO_MANIFEST_DIR=$(pwd)
-            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.lib.makeLibraryPath [
-              pkgs.alsaLib
-              pkgs.udev
-            ]}"'';
+            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${
+              pkgs.lib.makeLibraryPath (all_deps)
+            }"'';
         };
         packages.${system} = {
           app = naersk-lib.buildPackage {
